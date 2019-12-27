@@ -1,0 +1,52 @@
+<?xml  version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd">
+
+	<!-- =================================================================== -->
+	<!-- PROPERTY PLACEHOLDER -->
+	<!-- =================================================================== -->
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<value>classpath:test.properties</value>
+		</property>
+	</bean>
+
+	<bean id="mailboxManager" class="com.hs.mail.imap.mailbox.DefaultMailboxManager">
+		<property name="transactionManager" ref="txManager" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- DATASOURCE DEFINITION -->
+	<!-- =================================================================== -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.user}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxActive" value="${jdbc.maxActive}" />
+		<property name="maxIdle" value="${jdbc.maxIdle}" />
+		<property name="maxWait" value="10000" />
+		<property name="minEvictableIdleTimeMillis" value="600000" />
+		<property name="defaultAutoCommit" value="false" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- TRANSACTION MANAGER -->
+	<!-- =================================================================== -->
+	<bean id="txManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- DAO FACTORY -->
+	<!-- =================================================================== -->
+	<bean id="daoFactory" class="com.hs.mail.imap.dao.DaoFactory"
+		factory-method="getInstance">
+		<constructor-arg ref="dataSource"/>
+	</bean>
+
+</beans>

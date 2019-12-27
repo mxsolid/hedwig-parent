@@ -1,0 +1,68 @@
+                       ---------------------
+                       SMTP server access table
+                       ---------------------
+
+Description
+
+   This document describes access control on remote SMTP client information:
+   sender or recipient addresses.
+
+   The acess table is specified as a text file that servers as a blacklist
+   and whitelist for sender or recipient.
+
+Table Format
+
+   The input format for access table is as follows:
+
+   * <pattern action>
+
+     When <pattern> matches a mail address, domain or localpart@,
+     perform the corresponding <action>.
+     The <pattern> string is case insensitive.
+
+   * blank lines and comments
+
+     Empty lines and whitespace-only lines are ignored, as are lines whose first charcter is a '#'.
+
+Email Address Patterns
+
+   When lookup sender or recipient email addresses, patterns are tried in the order as listed bwlow:
+
+   * <user@domain>
+
+     Matches the specified mail address.
+
+   * <domain.tld>
+
+     Matches <domain.tld> as the domain part of an email address.
+
+   * <user@>
+
+     Matches all mail addresses with the specified user part.
+
+Actions
+
+   * <<OK>>
+
+     Accept the address that matches the pattern.
+
+   * <<REJECT>> 
+
+     Reject the address that matches the pattern.
+
+Example
+
++----+
+   conf/default.properties:
+      smtpd_sender_restrictions = check_sender_access
+
+   conf/sender_access:
+      myfriend@example.com    OK
+      junk@spam.com           REJECT
+      theboss@                OK
+      deals.marketing.com     REJECT
+      example.com             REJECT
++----+
+
+   The example rejects access with sender domain <example.com> except <myfriend@example.com>,
+   and <theboss@example.com>.

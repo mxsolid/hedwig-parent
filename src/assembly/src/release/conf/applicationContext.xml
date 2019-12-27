@@ -1,0 +1,241 @@
+<?xml  version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd">
+
+	<!-- =================================================================== -->
+	<!-- PROPERTY PLACEHOLDER -->
+	<!-- =================================================================== -->
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<value>file:${app.home}/conf/default.properties</value>
+		</property>
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- LOGGING -->
+	<!-- =================================================================== -->
+	<bean id="log4jInitialization"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetClass" value="org.springframework.util.Log4jConfigurer" />
+		<property name="targetMethod" value="initLogging" />
+		<property name="arguments">
+			<list>
+				<value>file:${app.home}/conf/log4j.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- APPLICATION CONTEXT AWARE COMPONENT -->
+	<!-- =================================================================== -->
+	<bean id="componentManager" class="com.hs.mail.container.config.ComponentManager" />
+
+	<!-- =================================================================== -->
+	<!-- GLOBAL CONFIGURATION -->
+	<!-- =================================================================== -->
+	<bean id="config" class="com.hs.mail.container.config.Config"
+		depends-on="log4jInitialization">
+		<property name="properties" ref="def.props" />
+	</bean>
+
+	<bean id="def.props"
+		class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+		<property name="location" value="file:${app.home}/conf/default.properties" />
+		<property name="fileEncoding" value="UTF-8" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- JAAS LOGIN CONFIGURATION -->
+	<!-- =================================================================== -->
+	<bean id="jaasLoginConfig" class="com.hs.mail.security.config.JaasLoginSupport">
+		<property name="location" value="file:${app.home}/conf/login.config" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- FACADE FOR DAOS -->
+	<!-- =================================================================== -->
+	<bean id="userManager" class="com.hs.mail.imap.user.DefaultUserManager">
+		<property name="transactionManager" ref="txManager" />
+	</bean>
+
+	<bean id="mailboxManager" class="com.hs.mail.imap.mailbox.DefaultMailboxManager">
+		<property name="transactionManager" ref="txManager" />
+		<property name="fetchDataCache" ref="fdCache" />
+		<property name="headerCache" ref="hdCache" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- DATASOURCE DEFINITION -->
+	<!-- =================================================================== -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.user}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxActive" value="${jdbc.maxActive}" />
+		<property name="maxIdle" value="${jdbc.maxIdle}" />
+		<property name="maxWait" value="10000" />
+		<property name="minEvictableIdleTimeMillis" value="600000" />
+		<property name="defaultAutoCommit" value="false" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- TRANSACTION MANAGER -->
+	<!-- =================================================================== -->
+	<bean id="txManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- DAO FACTORY -->
+	<!-- =================================================================== -->
+	<bean id="daoFactory" class="com.hs.mail.imap.dao.DaoFactory"
+		factory-method="getInstance">
+		<constructor-arg ref="dataSource"/>
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- IMAP SERVER -->
+	<!-- =================================================================== -->
+	<bean id="imap.server" class="com.hs.mail.imap.server.ImapServer"
+		depends-on="config">
+		<property name="port" value="143" />
+	</bean>
+
+	<!-- Use the following to enable SSL/TLS for IMAP -->
+	<!-- 
+	<bean id="imaps.server" class="com.hs.mail.imap.server.ImapServer" 
+		depends-on="config"> <property name="useTLS" value="true"/> <property name="port" 
+		value="993"/>
+	</bean>
+	-->
+
+	<!-- =================================================================== -->
+	<!-- DATA CACHE DEFINITIONS -->
+	<!-- =================================================================== -->
+	<bean id="cacheManager"
+		class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+		<property name="configLocation" value="${app.home}/conf/ehcache.xml" />
+	</bean>
+
+	<bean id="fdCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheManager" ref="cacheManager" />
+		<property name="cacheName" value="fdCache" />
+	</bean>
+
+	<bean id="hdCache" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheManager" ref="cacheManager" />
+		<property name="cacheName" value="hdCache" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- THE SCHEDULER -->
+	<!-- =================================================================== -->
+	<task:scheduled-tasks scheduler="scheduler">
+		<!-- Run every day at 3 AM -->
+		<task:scheduled ref="diskCleanupJob" method="execute"
+			cron="0 0 3 * * ?" />
+	</task:scheduled-tasks>
+
+	<task:scheduler id="scheduler" />
+
+	<bean id="diskCleanupJob" class="com.hs.mail.imap.schedule.DiskCleanupJob">
+		<property name="mailboxManager" ref="mailboxManager" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- SMTP SERVER -->
+	<!-- =================================================================== -->
+	<bean id="smtp.server" class="com.hs.mail.smtp.server.SmtpServer" depends-on="config">
+		<property name="port" value="25"/>
+		<property name="taskExecutor" ref="smtp.taskExecutor"/>
+	</bean>
+
+	<!-- Use the following to enable SSL/TLS for SMTP -->
+	<!-- 
+	<bean id="smtps.server" class="com.hs.mail.smtp.server.SmtpServer" depends-on="config">
+		<property name="useTLS" value="true"/>
+		<property name="port" value="465"/>
+		<property name="taskExecutor" ref="smtp.taskExecutor"/>
+	</bean>
+	-->
+
+	<bean id="smtp.taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+		<property name="corePoolSize" value="5" />
+  		<property name="maxPoolSize" value="10" />
+  		<property name="queueCapacity" value="25" />
+  		<property name="waitForTasksToCompleteOnShutdown" value="true" />
+    	<property name="awaitTerminationSeconds" value="10" />
+	</bean>
+	
+	<!-- =================================================================== -->
+	<!-- MESSAGE SPOOL DEFINITION -->
+	<!-- =================================================================== -->
+	<bean id="smtp.spool" class="com.hs.mail.smtp.spool.SpoolRepository">
+		<property name="consumers">
+			<list>
+				<ref bean="smtp.consumer"/>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="smtp.consumer" class="com.hs.mail.smtp.spool.SmtpMessageConsumer">
+		<property name="retryDelayTime" value="0"/>
+		<property name="mailetContext" ref="mailetContext" />
+		<property name="mailets">
+			<list>
+				<ref bean="deliver.local"/>
+				<ref bean="deliver.remote"/>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="mailetContext" class="com.hs.mail.mailet.DefaultMailetContext">
+		<property name="userManager" ref="userManager" />
+		<property name="mailboxManager" ref="mailboxManager" />
+	</bean>
+
+	<!-- =================================================================== -->
+	<!-- MAILET DEFINITIONS -->
+	<!-- =================================================================== -->
+	<bean id="deliver.local" class="com.hs.mail.mailet.LocalDelivery">
+		<property name="mailets">
+			<list>
+				<!-- <bean class="com.hs.mail.mailet.SpamAssassin" /> -->
+				<bean class="com.hs.mail.mailet.AliasingForwarding" />
+				<bean class="com.hs.mail.mailet.ToRepository" />
+			</list>
+		</property>
+	</bean>
+
+	<bean id="deliver.remote" class="com.hs.mail.mailet.RemoteDelivery" />
+
+	<!-- =================================================================== -->
+	<!-- DNS HELPER -->
+	<!-- =================================================================== -->
+	<bean id="dns.server" class="com.hs.mail.dns.DnsServer" />
+
+	<!-- =================================================================== -->
+	<!-- POP3 SERVER -->
+	<!-- =================================================================== -->
+	<!-- 
+	<bean id="pop3.server" class="com.hs.mail.pop3.server.POP3Server" depends-on="config">
+		<property name="port" value="110"/>
+		<property name="taskExecutor" ref="smtp.taskExecutor"/>
+	</bean>
+	-->
+
+	<!-- Use the following to enable SSL/TLS for POP3 -->
+	<!-- 
+	<bean id="pop3s.server" class="com.hs.mail.pop3.server.POP3Server" depends-on="config">
+		<property name="useTLS" value="true"/>
+		<property name="port" value="995"/>
+		<property name="taskExecutor" ref="smtp.taskExecutor"/>
+	</bean>
+	-->
+
+</beans>

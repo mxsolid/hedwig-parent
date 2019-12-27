@@ -1,0 +1,16 @@
+com\hs\mail\adm\command\MaildirCommand.class
+com\hs\mail\adm\command\PurgeCommand.class
+com\hs\mail\adm\search\SearchKeyBuilder.class
+com\hs\mail\adm\command\CommandFactory.class
+com\hs\mail\adm\command\HelpCommand.class
+com\hs\mail\adm\command\Messages.class
+com\hs\mail\adm\command\CommandHelp.class
+com\hs\mail\adm\command\PurgeCommand$1.class
+com\hs\mail\adm\Main.class
+com\hs\mail\adm\command\SearchCommand.class
+com\hs\mail\adm\command\ExpungeCommand.class
+com\hs\mail\adm\command\PurgeCommand$2.class
+com\hs\mail\adm\command\Command.class
+com\hs\mail\adm\command\AbstractMailboxCommand.class
+com\hs\mail\adm\command\AbstractCommand.class
+com\hs\mail\adm\command\MyNetworksCommand.class
