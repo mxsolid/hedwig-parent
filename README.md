@@ -1,9 +1,9 @@
-# [hedwig-parent](http://http://hwmail.sourceforge.net/)
+# [hedwig-parent](http://hwmail.sourceforge.net/)
 ## Hedwig Mail Server - The Open Source IMAP/SMTP/POP3 Server for Java
 ## Hedwig is an open source IMAP, SMTP, POP3 server written in Java, designed with ease of installation and configuration in mind. Hedwig enables storage of mail message headers in a relational database and mail messages in a file system. Currently MySQL and Oracle can be used as storage backend.
 
 ## Features
-100% pure Java capable of running on Java 1.6 onwards
+100% pure Java capable of running on Java 1.8 onwards
 
 ### Based on Java NIO framework (Netty)
 
